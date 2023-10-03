@@ -7,8 +7,8 @@ import (
 	"net/url"
 
 	"github.com/spf13/cobra"
-	"github.com/sw33tLie/bbscope/pkg/platforms/yeswehack"
-	"github.com/sw33tLie/bbscope/pkg/whttp"
+	"github.com/savushkin-yauheni/bbscope/pkg/platforms/yeswehack"
+	"github.com/savushkin-yauheni/bbscope/pkg/whttp"
 )
 
 // ywhCmd represents the ywh command

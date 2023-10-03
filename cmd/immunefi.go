@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/savushkin-yauheni/bbscope/pkg/platforms/immunefi"
+	"github.com/savushkin-yauheni/bbscope/pkg/whttp"
 	"github.com/spf13/cobra"
-	"github.com/sw33tLie/bbscope/pkg/platforms/immunefi"
-	"github.com/sw33tLie/bbscope/pkg/whttp"
 )
 
 // immunefiCmd represents the immunefi command

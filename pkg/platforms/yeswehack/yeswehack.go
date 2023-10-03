@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/sw33tLie/bbscope/pkg/scope"
-	"github.com/sw33tLie/bbscope/pkg/whttp"
+	"github.com/savushkin-yauheni/bbscope/pkg/scope"
+	"github.com/savushkin-yauheni/bbscope/pkg/whttp"
 	"github.com/tidwall/gjson"
 )
 
@@ -34,12 +34,12 @@ func GetCategoryID(input string) []string {
 }
 
 func GetProgramScope(token string, companySlug string, categories string) (pData scope.ProgramData) {
-	pData.Url = YESWEHACK_PROGRAM_BASE_ENDPOINT + companySlug
+	pData.Url = "https://yeswehack.com/programs/" + companySlug
 
 	res, err := whttp.SendHTTPRequest(
 		&whttp.WHTTPReq{
 			Method: "GET",
-			URL:    pData.Url,
+			URL:    YESWEHACK_PROGRAM_BASE_ENDPOINT + companySlug,
 			Headers: []whttp.WHTTPHeader{
 				{Name: "Authorization", Value: "Bearer " + token},
 			},
@@ -49,8 +49,8 @@ func GetProgramScope(token string, companySlug string, categories string) (pData
 		log.Fatal("HTTP request failed: ", err)
 	}
 
-	chunkData := gjson.GetMany(res.BodyString, "scopes.#.scope", "scopes.#.scope_type")
-
+	chunkData := gjson.GetMany(res.BodyString, "scopes.#.scope", "scopes.#.scope_type", "scopes.#.security_requirement")
+	pData.Name = gjson.Get(res.BodyString, "title").Str
 	for i := 0; i < len(chunkData[0].Array()); i++ {
 		selectedCatIDs := GetCategoryID(categories)
 
@@ -118,7 +118,5 @@ func GetAllProgramsScope(token string, bbpOnly bool, pvtOnly bool, categories st
 
 func PrintAllScope(token string, bbpOnly bool, pvtOnly bool, categories string, outputFlags string, delimiter string) {
 	programs := GetAllProgramsScope(token, bbpOnly, pvtOnly, categories)
-	for _, pData := range programs {
-		scope.PrintProgramScope(pData, outputFlags, delimiter, false)
-	}
+	scope.PrintProgramScope(programs, outputFlags, delimiter)
 }

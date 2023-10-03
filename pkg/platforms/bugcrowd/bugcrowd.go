@@ -14,9 +14,9 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/hashicorp/go-retryablehttp"
-	"github.com/sw33tLie/bbscope/internal/utils"
-	"github.com/sw33tLie/bbscope/pkg/scope"
-	"github.com/sw33tLie/bbscope/pkg/whttp"
+    "github.com/savushkin-yauheni/bbscope/internal/utils"
+	"github.com/savushkin-yauheni/bbscope/pkg/scope"
+	"github.com/savushkin-yauheni/bbscope/pkg/whttp"
 	"github.com/tidwall/gjson"
 )
 
@@ -158,11 +158,12 @@ func Login(email, password, proxy string) string {
 	return ""
 }
 
-func GetProgramHandles(sessionToken string, engagementType string, pvtOnly bool) []string {
+func GetProgramHandles(sessionToken string, engagementType string, pvtOnly bool) ([]string, map[string]string) {
 	pageIndex := 1
 
 	listEndpointURL := "https://bugcrowd.com/engagements.json?category=" + engagementType + "&sort_by=promoted&sort_direction=desc&page="
 	paths := []string{}
+	dictionary := make(map[string]string)
 
 	for {
 		var res *whttp.WHTTPRes
@@ -193,10 +194,12 @@ func GetProgramHandles(sessionToken string, engagementType string, pvtOnly bool)
 		// Iterating over each element in the programs array
 		result.ForEach(func(key, value gjson.Result) bool {
 			programURL := value.Get("briefUrl").String()
+			programName := value.Get("name").String()
 			accessStatus := value.Get("accessStatus").String()
 
 			if !pvtOnly || (pvtOnly && accessStatus != "open") {
 				paths = append(paths, programURL)
+				dictionary[programURL] = programName
 			}
 
 			// Return true to continue iterating
@@ -207,13 +210,14 @@ func GetProgramHandles(sessionToken string, engagementType string, pvtOnly bool)
 
 	}
 
-	return paths
+	return paths, dictionary
 }
 
-func GetProgramScope(handle string, categories string, token string) (pData scope.ProgramData) {
+func GetProgramScope(handle string, categories string, token string, name string) (pData scope.ProgramData) {
 	isEngagement := strings.HasPrefix(handle, "/engagements/")
 
 	pData.Url = "https://bugcrowd.com" + handle
+	pData.Name = name
 
 	if isEngagement {
 		getBriefVersionDocument := getEngagementBriefVersionDocument(handle, token)
@@ -324,15 +328,9 @@ func extractScopeFromTargetGroups(url string, categories string, token string, p
 		utils.Log.Fatal(err)
 	}
 
-	noScopeTable := true
 	for i, scopeTableURL := range gjson.Get(string(res.BodyString), "groups.#.targets_url").Array() {
 		inScope := gjson.Get(string(res.BodyString), fmt.Sprintf("groups.%d.in_scope", i)).Bool()
 		extractScopeFromTargetTable(scopeTableURL.String(), categories, token, pData, inScope)
-		noScopeTable = false
-	}
-
-	if noScopeTable {
-		pData.InScope = append(pData.InScope, scope.ScopeElement{Target: "NO_IN_SCOPE_TABLE", Description: "", Category: ""})
 	}
 }
 func extractScopeFromTargetTable(scopeTableURL string, categories string, token string, pData *scope.ProgramData, inScope bool) {
@@ -402,11 +400,7 @@ func GetCategories(input string) []string {
 }
 
 func GetAllProgramsScope(token string, bbpOnly bool, pvtOnly bool, categories string, outputFlags string, concurrency int, delimiterCharacter string, includeOOS, printRealTime bool) (programs []scope.ProgramData) {
-	programHandles := GetProgramHandles(token, "bug_bounty", pvtOnly)
-
-	if !bbpOnly {
-		programHandles = append(programHandles, GetProgramHandles(token, "vdp", pvtOnly)...)
-	}
+	programHandles, pathToName := GetProgramHandles(token, "bug_bounty", pvtOnly)
 
 	utils.Log.Info("Fetching ", strconv.Itoa(len(programHandles)), " programs...")
 
@@ -419,15 +413,11 @@ func GetAllProgramsScope(token string, bbpOnly bool, pvtOnly bool, categories st
 		go func() {
 			defer processGroup.Done()
 			for handle := range handles {
-				pScope := GetProgramScope(handle, categories, token)
+				pScope := GetProgramScope(handle, categories, token, pathToName[handle])
 
 				mutex.Lock()
 				programs = append(programs, pScope)
 				mutex.Unlock()
-
-				if printRealTime {
-					scope.PrintProgramScope(pScope, outputFlags, delimiterCharacter, includeOOS)
-				}
 			}
 		}()
 	}
@@ -440,3 +430,18 @@ func GetAllProgramsScope(token string, bbpOnly bool, pvtOnly bool, categories st
 	processGroup.Wait()
 	return programs
 }
+
+// PrintAllScope prints to stdout all scope elements of all targets
+func PrintAllScope(token string, bbpOnly bool, pvtOnly bool, categories string, outputFlags string, concurrency int, delimiter string, includeOOS, printRealTime bool) {
+	programs := GetAllProgramsScope(token, bbpOnly, pvtOnly, categories, outputFlags, concurrency, delimiter, includeOOS, printRealTime)
+	scope.PrintProgramScope(programs, outputFlags, delimiter)
+}
+
+/*
+// ListPrograms prints a list of available programs
+func ListPrograms(token string, bbpOnly bool, pvtOnly bool) {
+	programPaths := GetProgramPagePaths(token, bbpOnly, pvtOnly)
+	for _, path := range programPaths {
+		fmt.Println("https://bugcrowd.com" + path)
+	}
+}*/

@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sw33tLie/bbscope/internal/utils"
-	"github.com/sw33tLie/bbscope/pkg/scope"
-	"github.com/sw33tLie/bbscope/pkg/whttp"
+	"github.com/savushkin-yauheni/bbscope/internal/utils"
+	"github.com/savushkin-yauheni/bbscope/pkg/scope"
+	"github.com/savushkin-yauheni/bbscope/pkg/whttp"
 	"github.com/tidwall/gjson"
 )
 
@@ -32,7 +32,26 @@ func GetCategoryID(input string) []int {
 	return selectedCategory
 }
 
+func GetCategoryStr(cat_id int64) string {
+	categories := map[int64]string{
+		1: "url",
+		2: "android",
+		3: "ios",
+		4: "iprange",
+		5: "device",
+		6: "other",
+		7: "wildcard",
+	}
+
+	selectedCategory, ok := categories[cat_id]
+	if !ok {
+		log.Fatal("Invalid category")
+	}
+	return selectedCategory
+}
+
 func GetProgramScope(token string, programID string, categories string, bbpOnly bool, includeOOS bool) (pData scope.ProgramData) {
+	pData.Url = strings.ReplaceAll("https://www.intigriti.com/researcher/programs/"+programID+"/detail", " ", "%20")
 	res, err := whttp.SendHTTPRequest(
 		&whttp.WHTTPReq{
 			Method: "GET",
@@ -45,6 +64,12 @@ func GetProgramScope(token string, programID string, categories string, bbpOnly 
 	if err != nil {
 		log.Fatal("HTTP request failed: ", err)
 	}
+
+	pData.Name = gjson.Get(res.BodyString, "name").Str
+    if gjson.Get(res.BodyString, "status.id").Int() == 4 {
+		return pData
+	}
+
 
 	if res.StatusCode == 401 {
 		utils.Log.Fatal("Invalid auth token")
@@ -140,9 +165,6 @@ func GetAllProgramsScope(token string, bbpOnly bool, pvtOnly bool, categories, o
 				if (bbpOnly && maxBounty != 0) || !bbpOnly {
 					pData := GetProgramScope(token, id, categories, bbpOnly, includeOOS)
 					pData.Url = "https://app.intigriti.com/researcher" + programPath
-					if printRealTime {
-						scope.PrintProgramScope(pData, outputFlags, delimiterCharacter, includeOOS)
-					}
 
 					programs = append(programs, pData)
 				}
@@ -166,4 +188,9 @@ func isInArray(val int, array []int) bool {
 		}
 	}
 	return false
+}
+
+func PrintAllScope(token string, bbpOnly bool, pvtOnly bool, categories string, outputFlags string, delimiter string, includeOOS, printRealTime bool) {
+	programs := GetAllProgramsScope(token, bbpOnly, pvtOnly, categories, outputFlags, delimiter, includeOOS, printRealTime)
+	scope.PrintProgramScope(programs, outputFlags, delimiter)
 }

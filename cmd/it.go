@@ -7,8 +7,8 @@ import (
 	"net/url"
 
 	"github.com/spf13/cobra"
-	"github.com/sw33tLie/bbscope/pkg/platforms/intigriti"
-	"github.com/sw33tLie/bbscope/pkg/whttp"
+	"github.com/savushkin-yauheni/bbscope/pkg/platforms/intigriti"
+	"github.com/savushkin-yauheni/bbscope/pkg/whttp"
 )
 
 // itCmd represents the it command
@@ -50,7 +50,7 @@ var itCmd = &cobra.Command{
 			}
 		}
 
-		intigriti.GetAllProgramsScope(token, bbpOnly, pvtOnly, categories, outputFlags, delimiterCharacter, includeOOS, true)
+		intigriti.PrintAllScope(token, bbpOnly, pvtOnly, categories, outputFlags, delimiterCharacter, includeOOS, false)
 	},
 }
 
