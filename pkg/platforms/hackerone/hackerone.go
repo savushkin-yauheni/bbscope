@@ -9,11 +9,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sw33tLie/bbscope/internal/utils"
-	"github.com/sw33tLie/bbscope/pkg/scope"
-	"github.com/sw33tLie/bbscope/pkg/whttp"
+	"github.com/savushkin-yauheni/bbscope/internal/utils"
+	"github.com/savushkin-yauheni/bbscope/pkg/scope"
+	"github.com/savushkin-yauheni/bbscope/pkg/whttp"
 	"github.com/tidwall/gjson"
 )
+
+var HANDLE_TO_NAME map[string]string
+
 
 func getProgramScope(authorization string, id string, bbpOnly bool, categories []string, includeOOS bool) (pData scope.ProgramData) {
 	pData.Url = "https://hackerone.com/" + id
@@ -38,6 +41,9 @@ func getProgramScope(authorization string, id string, bbpOnly bool, categories [
 			// if we completed the requests with a final (non-429) status and we still failed
 			utils.Log.Fatal("Could not retrieve data for id ", id, " with status ", res.StatusCode)
 		}
+
+		pData.Name = HANDLE_TO_NAME[id]
+
 
 		l := int(gjson.Get(res.BodyString, "data.#").Int())
 
@@ -87,10 +93,6 @@ func getProgramScope(authorization string, id string, bbpOnly bool, categories [
 			pData.OutOfScope = []scope.ScopeElement{}
 		}
 
-		if l == 0 {
-			pData.InScope = append(pData.InScope, scope.ScopeElement{Target: "NO_IN_SCOPE_TABLE", Description: "", Category: ""})
-		}
-
 		nextPageURL := gjson.Get(res.BodyString, "links.next")
 		if nextPageURL.Exists() {
 			currentPageURL = nextPageURL.String()
@@ -132,6 +134,7 @@ func getCategories(input string) []string {
 
 func getProgramHandles(authorization string, pvtOnly bool, publicOnly bool, active bool) (handles []string) {
 	currentURL := "https://api.hackerone.com/v1/hackers/programs?page%5Bsize%5D=100"
+	HANDLE_TO_NAME = make(map[string]string)
 	for {
 		res, err := whttp.SendHTTPRequest(
 			&whttp.WHTTPReq{
@@ -154,11 +157,12 @@ func getProgramHandles(authorization string, pvtOnly bool, publicOnly bool, acti
 
 		for i := 0; i < int(gjson.Get(res.BodyString, "data.#").Int()); i++ {
 			handle := gjson.Get(res.BodyString, "data."+strconv.Itoa(i)+".attributes.handle")
-
+			HANDLE_TO_NAME[handle.Str] = gjson.Get(res.BodyString, "data."+strconv.Itoa(i)+".attributes.name").Str
+			submission_state := gjson.Get(res.BodyString, "data."+strconv.Itoa(i)+".attributes.submission_state").Str
 			if !publicOnly {
 				if !pvtOnly || (pvtOnly && gjson.Get(res.BodyString, "data."+strconv.Itoa(i)+".attributes.state").Str == "soft_launched") {
 					if active {
-						if gjson.Get(res.BodyString, "data."+strconv.Itoa(i)+".attributes.submission_state").Str == "open" {
+						if submission_state == "open" {
 							handles = append(handles, handle.Str)
 						}
 					} else {
@@ -168,7 +172,7 @@ func getProgramHandles(authorization string, pvtOnly bool, publicOnly bool, acti
 			} else {
 				if gjson.Get(res.BodyString, "data."+strconv.Itoa(i)+".attributes.state").Str == "public_mode" {
 					if active {
-						if gjson.Get(res.BodyString, "data."+strconv.Itoa(i)+".attributes.submission_state").Str == "open" {
+						if submission_state == "open" {
 							handles = append(handles, handle.Str)
 						}
 					} else {
@@ -213,11 +217,6 @@ func GetAllProgramsScope(authorization string, bbpOnly bool, pvtOnly bool, publi
 
 				mu.Lock()
 				programs = append(programs, programData)
-
-				// Check if printRealTime is true and print scope
-				if printRealTime {
-					scope.PrintProgramScope(programData, outputFlags, delimiter, includeOOS)
-				}
 
 				mu.Unlock()
 			}
@@ -299,4 +298,10 @@ func formatDate(dateStr string) string {
 		return dateStr // Return original string if parsing fails
 	}
 	return t.Format("02/01/2006 15:04:05") // Format as dd/mm/yyyy h:m:s
+}
+
+// PrintAllScope prints to stdout all scope elements of all targets
+func PrintAllScope(authorization string, bbpOnly bool, pvtOnly bool, publicOnly bool, categories string, outputFlags string, delimiter string, active bool, concurrency int, includeOOS, printRealTime bool) {
+	programs := GetAllProgramsScope(authorization, bbpOnly, pvtOnly, publicOnly, categories, active, concurrency, printRealTime, outputFlags, delimiter, includeOOS)
+	scope.PrintProgramScope(programs, outputFlags, delimiter)
 }

@@ -8,9 +8,9 @@ import (
 	"net/url"
 
 	"github.com/spf13/cobra"
-	"github.com/sw33tLie/bbscope/internal/utils"
-	"github.com/sw33tLie/bbscope/pkg/platforms/hackerone"
-	"github.com/sw33tLie/bbscope/pkg/whttp"
+	"github.com/savushkin-yauheni/bbscope/internal/utils"
+	"github.com/savushkin-yauheni/bbscope/pkg/platforms/hackerone"
+	"github.com/savushkin-yauheni/bbscope/pkg/whttp"
 )
 
 // h1Cmd represents the h1 command
@@ -66,7 +66,7 @@ var h1Cmd = &cobra.Command{
 			}
 		}
 
-		hackerone.GetAllProgramsScope(b64.StdEncoding.EncodeToString([]byte(username+":"+token)), bbpOnly, pvtOnly, publicOnly, categories, active, concurrency, true, outputFlags, delimiterCharacter, includeOOS)
+		hackerone.PrintAllScope(b64.StdEncoding.EncodeToString([]byte(username+":"+token)), bbpOnly, pvtOnly, publicOnly, categories, outputFlags, delimiterCharacter, active, concurrency, includeOOS, false)
 	},
 }
 
@@ -79,7 +79,7 @@ func init() {
 	h1Cmd.Flags().StringP("categories", "c", "all", "Scope categories, comma separated (Available: all, url, cidr, mobile, android, apple, ai, other, hardware, code, executable)")
 	h1Cmd.Flags().BoolP("public-only", "", false, "Only print scope for public programs")
 	h1Cmd.Flags().BoolP("active-only", "a", false, "Show only active programs")
-	h1Cmd.Flags().IntP("concurrency", "", 3, "Concurrency of HTTP requests sent for fetching data")
+	h1Cmd.Flags().IntP("concurrency", "", 1, "Concurrency of HTTP requests sent for fetching data")
 
 	hacktivityCmd.Flags().IntP("pages", "", 100, "Pages to fetch. From most recent to older pages. Max is 100")
 

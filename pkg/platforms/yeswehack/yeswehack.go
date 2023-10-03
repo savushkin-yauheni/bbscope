@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/sw33tLie/bbscope/pkg/scope"
-	"github.com/sw33tLie/bbscope/pkg/whttp"
+	"github.com/savushkin-yauheni/bbscope/pkg/scope"
+	"github.com/savushkin-yauheni/bbscope/pkg/whttp"
 	"github.com/tidwall/gjson"
 )
 
@@ -34,12 +34,12 @@ func GetCategoryID(input string) []string {
 }
 
 func GetProgramScope(token string, companySlug string, categories string) (pData scope.ProgramData) {
-	pData.Url = YESWEHACK_PROGRAM_BASE_ENDPOINT + companySlug
+	pData.Url = "https://yeswehack.com/programs/" + companySlug
 
 	res, err := whttp.SendHTTPRequest(
 		&whttp.WHTTPReq{
 			Method: "GET",
-			URL:    pData.Url,
+			URL:    YESWEHACK_PROGRAM_BASE_ENDPOINT + companySlug,
 			Headers: []whttp.WHTTPHeader{
 				{Name: "Authorization", Value: "Bearer " + token},
 			},
@@ -49,8 +49,8 @@ func GetProgramScope(token string, companySlug string, categories string) (pData
 		log.Fatal("HTTP request failed: ", err)
 	}
 
-	chunkData := gjson.GetMany(res.BodyString, "scopes.#.scope", "scopes.#.scope_type")
-
+	chunkData := gjson.GetMany(res.BodyString, "scopes.#.scope", "scopes.#.scope_type", "scopes.#.security_requirement")
+	pData.Name = gjson.Get(res.BodyString, "title").Str
 	for i := 0; i < len(chunkData[0].Array()); i++ {
 		selectedCatIDs := GetCategoryID(categories)
 
@@ -93,18 +93,21 @@ func GetAllProgramsScope(token string, bbpOnly bool, pvtOnly bool, categories st
 			log.Fatal("HTTP request failed: ", err)
 		}
 
-		data := gjson.GetMany(res.BodyString, "items.#.slug", "items.#.bounty", "items.#.public")
+		data := gjson.GetMany(res.BodyString, "items.#.slug", "items.#.bounty", "items.#.public", "items.#.disabled")
 
 		allCompanySlugs := data[0].Array()
 		allRewarding := data[1].Array()
 
 		allPublic := data[2].Array()
+		allDisabled := data[3].Array()
 
 		for i := 0; i < len(allCompanySlugs); i++ {
 			if !pvtOnly || (pvtOnly && !allPublic[i].Bool()) {
 				if !bbpOnly || (bbpOnly && allRewarding[i].Bool()) {
-					pData := GetProgramScope(token, allCompanySlugs[i].Str, categories)
-					programs = append(programs, pData)
+                    if !allDisabled[i].Bool() {
+                        pData := GetProgramScope(token, allCompanySlugs[i].Str, categories)
+                        programs = append(programs, pData)
+                    }
 				}
 			}
 		}
@@ -118,7 +121,5 @@ func GetAllProgramsScope(token string, bbpOnly bool, pvtOnly bool, categories st
 
 func PrintAllScope(token string, bbpOnly bool, pvtOnly bool, categories string, outputFlags string, delimiter string) {
 	programs := GetAllProgramsScope(token, bbpOnly, pvtOnly, categories)
-	for _, pData := range programs {
-		scope.PrintProgramScope(pData, outputFlags, delimiter, false)
-	}
+	scope.PrintProgramScope(programs, outputFlags, delimiter)
 }

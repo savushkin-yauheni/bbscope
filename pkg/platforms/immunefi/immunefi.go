@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/sw33tLie/bbscope/pkg/scope"
-	"github.com/sw33tLie/bbscope/pkg/whttp"
+	"github.com/savushkin-yauheni/bbscope/pkg/scope"
+	"github.com/savushkin-yauheni/bbscope/pkg/whttp"
 	"github.com/tidwall/gjson"
 )
 
@@ -17,9 +17,7 @@ const (
 
 func PrintAllScope(categories, outputFlags, delimiter string, concurrency int) {
 	programs := GetAllProgramsScope(categories, concurrency)
-	for _, pData := range programs {
-		scope.PrintProgramScope(pData, outputFlags, delimiter, false)
-	}
+	scope.PrintProgramScope(programs, outputFlags, delimiter)
 }
 
 func getCategories(input string) []string {
@@ -60,16 +58,20 @@ func GetAllProgramsScope(categories string, concurrency int) (programs []scope.P
 	selectedCategories := getCategories(categories)
 
 	var programURLs []string
+	dictionary := make(map[string]string)
 	doc.Find("#__NEXT_DATA__").Each(func(index int, s *goquery.Selection) {
 		json := s.Contents().Text()
 		jsonPrograms := gjson.Get(json, "props.pageProps.bounties")
 
 		for _, program := range jsonPrograms.Array() {
 			programID := gjson.Get(program.Raw, "id")
+			programName := gjson.Get(program.Raw, "project").Str
 			isExternal := gjson.Get(program.Raw, "is_external").Bool()
 
 			if !isExternal {
-				programURLs = append(programURLs, PLATFORM_URL+"/bounty/"+programID.Str+"/")
+				url := PLATFORM_URL + "/bounty/" + programID.Str + "/"
+				programURLs = append(programURLs, url)
+				dictionary[url] = programName
 			}
 		}
 	})
@@ -133,8 +135,11 @@ func GetAllProgramsScope(categories string, concurrency int) (programs []scope.P
 						}
 					}
 
+					programName, _ := dictionary[url]
+
 					programs = append(programs, scope.ProgramData{
 						Url:        url,
+						Name:       programName,
 						InScope:    tempScope,
 						OutOfScope: nil,
 					})

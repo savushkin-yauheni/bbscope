@@ -1,54 +1,31 @@
 package scope
 
 import (
+	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 )
 
 type ScopeElement struct {
-	Target      string
-	Description string
-	Category    string
+	Target      string `json:"name"`
+	Description string `json:"description"`
+	Category    string `json:"category"`
 }
 
 type ProgramData struct {
-	Url        string
-	InScope    []ScopeElement
-	OutOfScope []ScopeElement
+	Url        string         `json:"url"`
+	Name       string         `json:"name"`
+	InScope    []ScopeElement `json:"assets"`
+	OutOfScope []ScopeElement `json:"-"`
 }
 
-func PrintProgramScope(programScope ProgramData, outputFlags string, delimiter string, includeOOS bool) {
-	printScope := func(scope []ScopeElement, prefix string) {
-		for _, scopeElement := range scope {
-			line := createLine(scopeElement, programScope.Url, outputFlags, delimiter)
-			if len(line) > 0 {
-				fmt.Println(prefix + line)
-			}
-		}
-	}
+func PrintProgramScope(programScope []ProgramData, outputFlags string, delimiter string) {
+	lines := ""
+	jsonData, _ := json.Marshal(programScope)
+	lines += string(jsonData)
+	lines = strings.TrimSuffix(lines, "\n")
 
-	printScope(programScope.InScope, "")
-	if includeOOS {
-		printScope(programScope.OutOfScope, "[OOS] ")
+	if len(lines) > 0 {
+		fmt.Println(lines)
 	}
-}
-
-func createLine(scopeElement ScopeElement, url, outputFlags, delimiter string) string {
-	var line string
-	for _, f := range outputFlags {
-		switch f {
-		case 't':
-			line += scopeElement.Target + delimiter
-		case 'd':
-			line += scopeElement.Description + delimiter
-		case 'c':
-			line += scopeElement.Category + delimiter
-		case 'u':
-			line += url + delimiter
-		default:
-			log.Fatal("Invalid print flag")
-		}
-	}
-	return strings.TrimSuffix(line, delimiter)
 }

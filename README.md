@@ -1,5 +1,5 @@
 # bbscope
-The ultimate scope gathering tool for [HackerOne](https://hackerone.com/), [Bugcrowd](https://bugcrowd.com/), [Intigriti](https://intigriti.com), [Immunefi](https://immunefi.com/) and [YesWeHack](https://yeswehack.com/) by sw33tLie.
+The ultimate scope gathering tool for [HackerOne](https://hackerone.com/), [Bugcrowd](https://bugcrowd.com/), [Intigriti](https://intigriti.com), [Immunefi](https://immunefi.com/) and [YesWeHack](https://yeswehack.com/) by savushkin-yauheni.
 
 Need to grep all the large scope domains that you've got on your bug bounty platforms? This is the right tool for the job.  
 What about getting a list of android apps that you are allowed to test? We've got you covered as well.
@@ -10,7 +10,7 @@ Reverse engineering god? No worries, you can get a list of binaries to analyze t
 Make sure you've a recent version of the Go compiler installed on your system.
 Then just run:
 ```
-GO111MODULE=on go install github.com/sw33tLie/bbscope@latest
+GO111MODULE=on go install github.com/savushkin-yauheni/bbscope@latest
 ```
 
 ## Usage

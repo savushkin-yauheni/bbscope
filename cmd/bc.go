@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/savushkin-yauheni/bbscope/pkg/platforms/bugcrowd"
+	"github.com/savushkin-yauheni/bbscope/internal/utils"
+	"github.com/savushkin-yauheni/bbscope/pkg/whttp"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/sw33tLie/bbscope/internal/utils"
-	"github.com/sw33tLie/bbscope/pkg/platforms/bugcrowd"
-	"github.com/sw33tLie/bbscope/pkg/whttp"
 )
 
 // bcCmd represents the bc command
@@ -60,7 +60,7 @@ var bcCmd = &cobra.Command{
 			token = bugcrowd.Login(email, password, proxy)
 		}
 
-		bugcrowd.GetAllProgramsScope(token, bbpOnly, pvtOnly, categories, outputFlags, concurrency, delimiterCharacter, includeOOS, true)
+		bugcrowd.PrintAllScope(token, bbpOnly, pvtOnly, categories, outputFlags, concurrency, delimiterCharacter, includeOOS, true)
 		utils.Log.Info("bbscope run successfully")
 	},
 }
